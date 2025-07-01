@@ -46,7 +46,7 @@ UPLOAD_FORM = """
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h1 class="card-title mb-0">
-                            <i class="bi bi-cloud-upload"></i> Neurons Can Fly File Portal
+                            <i class="bi bi-cloud-upload"></i> Neurons Can Fly Upload Portal
                         </h1>
                     </div>
                     <div class="card-body">
