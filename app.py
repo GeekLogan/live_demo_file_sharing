@@ -13,10 +13,12 @@ import threading
 import subprocess
 import pathlib
 
-FFMPEG_BIN = "./ffmpeg"  # Path to ffmpeg binary, ensure it's in your PATH or provide full path
+FFMPEG_BIN = (
+    "./ffmpeg"  # Path to ffmpeg binary, ensure it's in your PATH or provide full path
+)
 
 job_queue = []
-in_processing_queue = set() # Use a set to track files currently being processed
+in_processing_queue = set()  # Use a set to track files currently being processed
 job_queue_lock = threading.Lock()
 
 app = Flask(__name__)
@@ -44,7 +46,7 @@ UPLOAD_FORM = """
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h1 class="card-title mb-0">
-                            <i class="bi bi-cloud-upload"></i> File Sharing
+                            <i class="bi bi-cloud-upload"></i> Neurons Can Fly File Portal
                         </h1>
                     </div>
                     <div class="card-body">
@@ -83,7 +85,7 @@ UPLOAD_FORM = """
 
                         <!-- Available Files -->
                         {% if show_files_flag %}
-                        <div>
+                        <div class="mb-4">
                             <h3 class="mb-3"><i class="bi bi-files"></i> Available Files</h3>
                             {% if files %}
                                 <div class="list-group">
@@ -103,6 +105,53 @@ UPLOAD_FORM = """
                                 </div>
                             {% endif %}
                         </div>
+
+                        <!-- Processing Queue -->
+                        <div>
+                            <h3 class="mb-3"><i class="bi bi-gear"></i> Processing Queue</h3>
+                            {% if processing_files or queue_files %}
+                                <!-- Currently Processing -->
+                                {% if processing_files %}
+                                    <div class="mb-3">
+                                        <h5 class="text-warning"><i class="bi bi-gear-fill"></i> Currently Processing</h5>
+                                        <div class="list-group">
+                                            {% for filename in processing_files %}
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span>
+                                                        <i class="bi bi-file-earmark-code"></i> {{ filename }}
+                                                    </span>
+                                                    <div class="spinner-border spinner-border-sm text-warning" role="status">
+                                                        <span class="visually-hidden">Processing...</span>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Waiting in Queue -->
+                                {% if queue_files %}
+                                    <div class="mb-3">
+                                        <h5 class="text-info"><i class="bi bi-clock"></i> Waiting in Queue</h5>
+                                        <div class="list-group">
+                                            {% for filename in queue_files %}
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span>
+                                                        <i class="bi bi-file-earmark-text"></i> {{ filename }}
+                                                    </span>
+                                                    <span class="badge bg-info">Queued</span>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="alert alert-secondary" role="alert">
+                                    <i class="bi bi-check-circle"></i> No files currently being processed.
+                                </div>
+                            {% endif %}
+                        </div>
+
                         {% endif %}
                     </div>
                 </div>
@@ -127,18 +176,34 @@ def upload_file():
             return redirect(request.url)
         if file:
             # Get custom filename from form, or use original filename
-            custom_filename = pathlib.Path(request.form.get("filename", "").strip().lower())
+            custom_filename = pathlib.Path(
+                request.form.get("filename", "").strip().lower()
+            )
             final_filename = pathlib.Path(file.filename.lower())
 
             try:
                 # Use custom filename, append the original file extension
-                #final_filename = custom_filename.lower() + '.' + file.filename.lower().split('.')[-1] 
+                # final_filename = custom_filename.lower() + '.' + file.filename.lower().split('.')[-1]
                 final_filename = custom_filename.with_suffix(final_filename.suffix)
             except Exception as e:
-                pass # Failed to parse custom filename, use original
-            
-            #filepath = os.path.join(app.config["UPLOAD_FOLDER"], final_filename)
-            filepath = pathlib.Path(app.config["UPLOAD_FOLDER"]) / final_filename 
+                pass  # Failed to parse custom filename, use original
+
+            # Validate the final filename
+            print("Final filename:", final_filename)
+            if final_filename.name.startswith("."):
+                flash("Invalid filename. Please provide a valid name.")
+                return redirect(request.url)
+
+            # filepath = os.path.join(app.config["UPLOAD_FOLDER"], final_filename)
+            filepath = pathlib.Path(app.config["UPLOAD_FOLDER"]) / final_filename
+
+            # Check if file already exists
+            if filepath.exists():
+                flash(
+                    f"File '{final_filename}' already exists. Please choose a different name."
+                )
+                return redirect(request.url)
+
             file.save(filepath)
 
             # Add the file to the job queue for processing
@@ -147,15 +212,29 @@ def upload_file():
 
             flash(f"File uploaded successfully as {final_filename}!")
             return redirect(url_for("upload_file"))
-        
+
     # GET request: render the upload form and list available files
     files = os.listdir(app.config["UPLOAD_FOLDER"])
 
     with job_queue_lock:
         # Remove files that are currently being processed
-        files = [f for f in files if f not in in_processing_queue]
+        files = [
+            f
+            for f in files
+            if (f not in in_processing_queue) and (not f.startswith("."))
+        ]
+        # Get files currently being processed
+        processing_files = list(in_processing_queue)
+        # Get files waiting in queue (extract just the filenames)
+        queue_files = [os.path.basename(str(job)) for job in job_queue]
 
-    return render_template_string(UPLOAD_FORM, files=files, show_files_flag=True)
+    return render_template_string(
+        UPLOAD_FORM,
+        files=files,
+        show_files_flag=True,
+        processing_files=processing_files,
+        queue_files=queue_files,
+    )
 
 
 @app.route("/uploads/<path:filename>")
@@ -163,6 +242,7 @@ def download_file(filename):
     return send_from_directory(
         app.config["UPLOAD_FOLDER"], filename, as_attachment=True
     )
+
 
 def background_worker():
     while True:
@@ -179,10 +259,12 @@ def background_worker():
 
         print("Processing job:", job)
 
-        if job.suffix in ['.mov', '.mp4', '.avi', '.mkv', '.flv', '.wmv', '.webm']:
+        if job.suffix in [".mov", ".mp4", ".avi", ".mkv", ".flv", ".wmv", ".webm"]:
             # Convert video files to mp4 x264 fps=10 format if they are not already
-            
-            out_fname = job.with_stem(f"{job.stem}_converted").with_suffix('.mp4')  # Change extension to .mp4
+
+            out_fname = job.with_stem(f"{job.stem}_converted").with_suffix(
+                ".mp4"
+            )  # Change extension to .mp4
 
             job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p -s 1280x720 -preset fast -crf 23 -an "{out_fname}"'
             print("Prepared job command:", job_exec)
@@ -204,6 +286,7 @@ def background_worker():
             print(f"Error processing job: {e}")
 
         print(f"Finished processing job: {job}")
+
 
 worker_thread = threading.Thread(target=background_worker, daemon=True)
 worker_thread.start()
