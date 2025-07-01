@@ -324,9 +324,23 @@ def background_worker():
                 ".mp4"
             )  # Change extension to .mp4
 
-            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p' 
-            job_exec += " -vf \"scale=if(gt(iw,ih),-2,720):if(gt(iw,ih),720,-2)\" "
-            job_exec += f'-preset fast -crf 23 -an -r 10 "{out_fname}"'
+            job_exec = [
+                FFMPEG_BIN,
+                "-y",  # Overwrite output file without asking
+                "-noautorotate",  # Disable auto-rotation
+                "-i", str(job),  # Input file
+                "-c:v", "libx264",  # Video codec
+                "-pix_fmt", "yuv420p",  # Pixel format
+                "-vf", "scale='if(gt(iw,ih),-1,720)':'if(gt(iw,ih),720,-1)'",
+                "-preset", "fast",  # Encoding preset
+                "-crf", "23",  # Constant Rate Factor for quality
+                "-an",  # Disable audio
+                "-r", "10",  # Set frame rate to 10 fps
+                str(out_fname),  # Output file
+            ]
+
+            job_exec = " ".join(job_exec)  # Convert list to string for subprocess
+
             print("Prepared job command:", job_exec)
 
             pass
