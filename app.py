@@ -147,7 +147,7 @@ def upload_file():
     print(in_processing_queue)
     with job_queue_lock:
         # Remove files that are currently being processed
-        files = [f for f in files if f not in in_processing_queue]
+        files = [f for f in files if f.split('/')[-1] not in in_processing_queue]
 
     return render_template_string(UPLOAD_FORM, files=files)
 
