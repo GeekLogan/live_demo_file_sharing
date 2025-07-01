@@ -184,11 +184,11 @@ def background_worker():
         try:
             # Example: run a shell command or process the job
             with job_queue_lock:
-                in_processing_queue.add(job)
+                in_processing_queue.add(out_fname)
             subprocess.run(job, shell=True)
             with job_queue_lock:
                 if job in in_processing_queue:
-                    in_processing_queue.remove(job)
+                    in_processing_queue.remove(out_fname)
         except Exception as e:
             print(f"Error processing job: {e}")
 
