@@ -324,7 +324,7 @@ def background_worker():
                 ".mp4"
             )  # Change extension to .mp4
 
-            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p -s 1280x720 -preset fast -crf 23 -an -r 10 "{out_fname}"'
+            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p scale=w=\'if(lte(iw,ih),720,-1)\':h=\'if(lte(iw,ih),-1,720)\' -preset fast -crf 23 -an -r 10 "{out_fname}"'
             print("Prepared job command:", job_exec)
 
             pass
