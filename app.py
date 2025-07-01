@@ -116,13 +116,13 @@ def upload_file():
             flash("No selected file")
             return redirect(request.url)
         if file:
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename.lower())
             file.save(filepath)
 
             # Add the file to the job queue for processing
             with job_queue_lock:
                 job_queue.append(filepath)
-                
+
             flash(f"File {file.filename} uploaded successfully!")
             return redirect(url_for("upload_file"))
         
@@ -155,8 +155,8 @@ def background_worker():
         if job.lower().endswith(".mov"):
             # Process the job (e.g., convert video)
             # Here we assume job is a file path to be processed
-        
-            job = f'{FFMPEG_BIN} -i "{job}" -c:v copy -c:a copy "{job}_converted.mp4"'
+            #ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 -an output.mp4
+            job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{job.replace('.mov', '')}_converted.mp4"'
         else:
             continue
 
@@ -165,6 +165,8 @@ def background_worker():
             subprocess.run(job, shell=True)
         except Exception as e:
             print(f"Error processing job: {e}")
+
+        print(f"Finished processing job: {job}")
 
 worker_thread = threading.Thread(target=background_worker, daemon=True)
 worker_thread.start()
