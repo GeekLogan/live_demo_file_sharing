@@ -245,6 +245,8 @@ def download_file(filename):
 
 
 def background_worker():
+    print("Background worker started...")
+    
     while True:
         with job_queue_lock:
             if job_queue:
