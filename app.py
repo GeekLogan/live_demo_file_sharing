@@ -162,8 +162,6 @@ def background_worker():
         with job_queue_lock:
             if job_queue:
                 job = job_queue.pop(0)
-                if job:
-                    in_processing_queue.add(job)
             else:
                 job = None
 
@@ -177,13 +175,18 @@ def background_worker():
         if job.lower().endswith(".mov"):
             # Convert iphone video to mp4
             #ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 -an output.mp4
-            job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{job.replace('.mov', '')}_converted.mp4"'
+            out_fname = job.replace('.mov', '') + '_converted.mp4'
+            job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{out_fname}"'
         else:
             continue
 
         try:
             # Example: run a shell command or process the job
+            with job_queue_lock:
+                in_processing_queue.add(job)
             subprocess.run(job, shell=True)
+            with job_queue_lock:
+                in_processing_queue.remove(job)
         except Exception as e:
             print(f"Error processing job: {e}")
 
