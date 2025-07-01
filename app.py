@@ -328,15 +328,15 @@ def background_worker():
                 FFMPEG_BIN,
                 "-y",  # Overwrite output file without asking
                 "-noautorotate",  # Disable auto-rotation
-                "-i", str(job),  # Input file
+                "-i", f'"{str(job)}"',  # Input file
                 "-c:v", "libx264",  # Video codec
                 "-pix_fmt", "yuv420p",  # Pixel format
-                "-vf", "scale='if(gt(iw,ih),-1,720)':'if(gt(iw,ih),720,-1)'",
+                "-vf", "\"scale='if(gt(iw,ih),-1,720)':'if(gt(iw,ih),720,-1)'\"",
                 "-preset", "fast",  # Encoding preset
                 "-crf", "23",  # Constant Rate Factor for quality
                 "-an",  # Disable audio
                 "-r", "10",  # Set frame rate to 10 fps
-                str(out_fname),  # Output file
+                f'"{str(out_fname)}"',  # Output file
             ]
 
             job_exec = " ".join(job_exec)  # Convert list to string for subprocess
