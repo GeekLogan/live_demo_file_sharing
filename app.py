@@ -144,6 +144,7 @@ def upload_file():
     # GET request: render the upload form and list available files
     files = os.listdir(app.config["UPLOAD_FOLDER"])
 
+    print(in_processing_queue)
     with job_queue_lock:
         # Remove files that are currently being processed
         files = [f for f in files if f not in in_processing_queue]
@@ -186,15 +187,12 @@ def background_worker():
                 in_processing_queue.add(job)
             subprocess.run(job, shell=True)
             with job_queue_lock:
-                in_processing_queue.remove(job)
+                if job in in_processing_queue:
+                    in_processing_queue.remove(job)
         except Exception as e:
             print(f"Error processing job: {e}")
 
         print(f"Finished processing job: {job}")
-
-        with job_queue_lock:
-            if job in in_processing_queue:
-                in_processing_queue.remove(job)
 
 worker_thread = threading.Thread(target=background_worker, daemon=True)
 worker_thread.start()
