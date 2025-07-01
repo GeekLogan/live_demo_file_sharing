@@ -11,6 +11,7 @@ import os
 
 import threading
 import subprocess
+import pathlib
 
 FFMPEG_BIN = "./ffmpeg"  # Path to ffmpeg binary, ensure it's in your PATH or provide full path
 
@@ -81,6 +82,7 @@ UPLOAD_FORM = """
                         {% endwith %}
 
                         <!-- Available Files -->
+                        {% if show_files_flag %}
                         <div>
                             <h3 class="mb-3"><i class="bi bi-files"></i> Available Files</h3>
                             {% if files %}
@@ -101,6 +103,7 @@ UPLOAD_FORM = """
                                 </div>
                             {% endif %}
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -124,14 +127,18 @@ def upload_file():
             return redirect(request.url)
         if file:
             # Get custom filename from form, or use original filename
-            custom_filename = request.form.get("filename", "").strip()
-            final_filename = file.filename.lower()
+            custom_filename = pathlib.Path(request.form.get("filename", "").strip().lower())
+            final_filename = pathlib.Path(file.filename.lower())
 
-            if custom_filename:
+            try:
                 # Use custom filename, append the original file extension
-                final_filename = custom_filename.lower() + '.' + file.filename.lower().split('.')[-1] 
+                #final_filename = custom_filename.lower() + '.' + file.filename.lower().split('.')[-1] 
+                final_filename = custom_filename.with_suffix(final_filename.suffix)
+            except Exception as e:
+                pass # Failed to parse custom filename, use original
             
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], final_filename)
+            #filepath = os.path.join(app.config["UPLOAD_FOLDER"], final_filename)
+            filepath = pathlib.Path(app.config["UPLOAD_FOLDER"]) / final_filename 
             file.save(filepath)
 
             # Add the file to the job queue for processing
@@ -148,7 +155,7 @@ def upload_file():
         # Remove files that are currently being processed
         files = [f for f in files if f not in in_processing_queue]
 
-    return render_template_string(UPLOAD_FORM, files=files)
+    return render_template_string(UPLOAD_FORM, files=files, show_files_flag=True)
 
 
 @app.route("/uploads/<path:filename>")
@@ -172,22 +179,27 @@ def background_worker():
 
         print("Processing job:", job)
 
-        if job.lower().endswith(".mov"):
-            # Convert iphone video to mp4
-            #ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 -an output.mp4
-            out_fname = job.replace('.mov', '') + '_converted.mp4'
-            out_fname_nopath = out_fname.split('/')[-1]  # Get just the filename part
-            job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{out_fname}"'
+        if job.suffix in ['.mov', '.mp4', '.avi', '.mkv', '.flv', '.wmv', '.webm']:
+            # Convert video files to mp4 x264 fps=10 format if they are not already
+            
+            out_fname = job.with_stem(f"{job.stem}_converted").with_suffix('.mp4')  # Change extension to .mp4
+
+            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p -s 1280x720 -preset fast -crf 23 -an "{out_fname}"'
+            print("Prepared job command:", job_exec)
+
+            pass
         else:
+            # If the file is not a video, skip processing
+            print(f"Skipping non-video file: {job}")
             continue
 
         try:
             # Example: run a shell command or process the job
             with job_queue_lock:
-                in_processing_queue.add(out_fname_nopath)  
-            subprocess.run(job, shell=True)
+                in_processing_queue.add(out_fname.name)
+            subprocess.run(job_exec, shell=True)
             with job_queue_lock:
-                in_processing_queue.remove(out_fname_nopath)
+                in_processing_queue.remove(out_fname.name)
         except Exception as e:
             print(f"Error processing job: {e}")
 
