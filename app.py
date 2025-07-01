@@ -153,8 +153,7 @@ def background_worker():
         print("Processing job:", job)
 
         if job.lower().endswith(".mov"):
-            # Process the job (e.g., convert video)
-            # Here we assume job is a file path to be processed
+            # Convert iphone video to mp4
             #ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 -an output.mp4
             job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{job.replace('.mov', '')}_converted.mp4"'
         else:
