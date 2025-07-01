@@ -144,7 +144,6 @@ def upload_file():
     # GET request: render the upload form and list available files
     files = os.listdir(app.config["UPLOAD_FOLDER"])
 
-    print(in_processing_queue)
     with job_queue_lock:
         # Remove files that are currently being processed
         files = [f for f in files if f not in in_processing_queue]
