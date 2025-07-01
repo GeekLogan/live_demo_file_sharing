@@ -176,6 +176,7 @@ def background_worker():
             # Convert iphone video to mp4
             #ffmpeg -i input.mov -c:v libx264 -preset fast -crf 23 -an output.mp4
             out_fname = job.replace('.mov', '') + '_converted.mp4'
+            out_fname_nopath = out_fname.split('/')[-1]  # Get just the filename part
             job = f'{FFMPEG_BIN} -i "{job}" -c:v libx264 -preset fast -crf 23 -an "{out_fname}"'
         else:
             continue
@@ -183,11 +184,10 @@ def background_worker():
         try:
             # Example: run a shell command or process the job
             with job_queue_lock:
-                in_processing_queue.add(out_fname.split('/')[-1])  # Add only the filename part to the processing queue
+                in_processing_queue.add(out_fname_nopath)  
             subprocess.run(job, shell=True)
             with job_queue_lock:
-                if job in in_processing_queue:
-                    in_processing_queue.remove(out_fname.split('/')[-1])
+                in_processing_queue.remove(out_fname_nopath)
         except Exception as e:
             print(f"Error processing job: {e}")
 
