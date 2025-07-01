@@ -51,7 +51,13 @@ UPLOAD_FORM = """
                             <h3 class="mb-3"><i class="bi bi-upload"></i> Upload a File</h3>
                             <form method="post" enctype="multipart/form-data" class="border rounded p-3 bg-light">
                                 <div class="mb-3">
-                                    <input type="file" name="file" class="form-control" required>
+                                    <label for="file" class="form-label">Select File</label>
+                                    <input type="file" name="file" id="file" class="form-control" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="filename" class="form-label">Custom File Name (optional)</label>
+                                    <input type="text" name="filename" id="filename" class="form-control" placeholder="Leave empty to use original name">
+                                    <div class="form-text">You can specify a custom name for the uploaded file. Include the file extension if needed.</div>
                                 </div>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-cloud-upload"></i> Upload File
@@ -116,14 +122,22 @@ def upload_file():
             flash("No selected file")
             return redirect(request.url)
         if file:
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename.lower())
+            # Get custom filename from form, or use original filename
+            custom_filename = request.form.get("filename", "").strip()
+            final_filename = file.filename.lower()
+
+            if custom_filename:
+                # Use custom filename, append the original file extension
+                final_filename = custom_filename.lower() + '.' + file.filename.lower().split('.')[-1] 
+            
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], final_filename)
             file.save(filepath)
 
             # Add the file to the job queue for processing
             with job_queue_lock:
                 job_queue.append(filepath)
 
-            flash(f"File {file.filename} uploaded successfully!")
+            flash(f"File uploaded successfully as {final_filename}!")
             return redirect(url_for("upload_file"))
         
     # GET request: render the upload form and list available files
