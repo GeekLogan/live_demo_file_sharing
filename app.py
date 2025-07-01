@@ -9,9 +9,17 @@ from flask import (
 )
 import os
 
+import threading
+import subprocess
+
+FFMPEG_BIN = "./ffmpeg"  # Path to ffmpeg binary, ensure it's in your PATH or provide full path
+
+job_queue = []
+job_queue_lock = threading.Lock()
+
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploads"
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100 MB limit
+app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 1000 MB limit
 app.secret_key = "supersecretkey"  # Needed for flash messages
 
 # Ensure upload folder exists
@@ -104,14 +112,21 @@ def upload_file():
             flash("No file part")
             return redirect(request.url)
         file = request.files["file"]
-        if file.filename == "":
+        if len(file.filename) == 0:
             flash("No selected file")
             return redirect(request.url)
         if file:
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
             file.save(filepath)
+
+            # Add the file to the job queue for processing
+            with job_queue_lock:
+                job_queue.append(filepath)
+                
             flash(f"File {file.filename} uploaded successfully!")
             return redirect(url_for("upload_file"))
+        
+    # GET request: render the upload form and list available files
     files = os.listdir(app.config["UPLOAD_FOLDER"])
     return render_template_string(UPLOAD_FORM, files=files)
 
@@ -122,6 +137,37 @@ def download_file(filename):
         app.config["UPLOAD_FOLDER"], filename, as_attachment=True
     )
 
+def background_worker():
+    while True:
+        with job_queue_lock:
+            if job_queue:
+                job = job_queue.pop(0)
+            else:
+                job = None
+
+        if not job:
+            # If no job is available, wait for a while before checking again
+            threading.Event().wait(1)
+            continue
+
+        print("Processing job:", job)
+
+        if job.lower().endswith(".mov"):
+            # Process the job (e.g., convert video)
+            # Here we assume job is a file path to be processed
+        
+            job = f'{FFMPEG_BIN} -i "{job}" -c:v copy -c:a copy "{job}_converted.mp4"'
+        else:
+            continue
+
+        try:
+            # Example: run a shell command or process the job
+            subprocess.run(job, shell=True)
+        except Exception as e:
+            print(f"Error processing job: {e}")
+
+worker_thread = threading.Thread(target=background_worker, daemon=True)
+worker_thread.start()
 
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=8000)
