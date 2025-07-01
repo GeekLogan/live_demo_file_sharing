@@ -15,6 +15,7 @@ import subprocess
 FFMPEG_BIN = "./ffmpeg"  # Path to ffmpeg binary, ensure it's in your PATH or provide full path
 
 job_queue = []
+in_processing_queue = set() # Use a set to track files currently being processed
 job_queue_lock = threading.Lock()
 
 app = Flask(__name__)
@@ -142,6 +143,11 @@ def upload_file():
         
     # GET request: render the upload form and list available files
     files = os.listdir(app.config["UPLOAD_FOLDER"])
+
+    with job_queue_lock:
+        # Remove files that are currently being processed
+        files = [f for f in files if f not in in_processing_queue]
+
     return render_template_string(UPLOAD_FORM, files=files)
 
 
@@ -156,6 +162,8 @@ def background_worker():
         with job_queue_lock:
             if job_queue:
                 job = job_queue.pop(0)
+                if job:
+                    in_processing_queue.add(job)
             else:
                 job = None
 
@@ -180,6 +188,10 @@ def background_worker():
             print(f"Error processing job: {e}")
 
         print(f"Finished processing job: {job}")
+
+        with job_queue_lock:
+            if job in in_processing_queue:
+                in_processing_queue.remove(job)
 
 worker_thread = threading.Thread(target=background_worker, daemon=True)
 worker_thread.start()
