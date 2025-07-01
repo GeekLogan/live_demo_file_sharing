@@ -147,7 +147,7 @@ def upload_file():
     print(in_processing_queue)
     with job_queue_lock:
         # Remove files that are currently being processed
-        files = [f for f in files if f.split('/')[-1] not in in_processing_queue]
+        files = [f for f in files if f not in in_processing_queue]
 
     return render_template_string(UPLOAD_FORM, files=files)
 
@@ -184,11 +184,11 @@ def background_worker():
         try:
             # Example: run a shell command or process the job
             with job_queue_lock:
-                in_processing_queue.add(out_fname)
+                in_processing_queue.add(out_fname.split('/')[-1])  # Add only the filename part to the processing queue
             subprocess.run(job, shell=True)
             with job_queue_lock:
                 if job in in_processing_queue:
-                    in_processing_queue.remove(out_fname)
+                    in_processing_queue.remove(out_fname.split('/')[-1])
         except Exception as e:
             print(f"Error processing job: {e}")
 
