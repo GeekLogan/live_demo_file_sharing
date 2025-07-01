@@ -31,15 +31,71 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 UPLOAD_FORM = """
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Sharing</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0a0a0a !important;
+        }
+        .card {
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+        }
+        .card-header {
+            background-color: #0d6efd !important;
+            border-bottom: 1px solid #444;
+        }
+        .bg-light {
+            background-color: #3a3a3a !important;
+        }
+        .list-group-item {
+            background-color: #3a3a3a;
+            border-color: #505050;
+            color: #ffffff;
+        }
+        .list-group-item:hover {
+            background-color: #505050;
+        }
+        .form-control {
+            background-color: #3a3a3a;
+            border-color: #505050;
+            color: #ffffff;
+        }
+        .form-control:focus {
+            background-color: #3a3a3a;
+            border-color: #0d6efd;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .alert-info {
+            background-color: #1e4a6b;
+            border-color: #3a6fb0;
+            color: #cde8ff;
+        }
+        .alert-secondary {
+            background-color: #3a3a3a;
+            border-color: #505050;
+            color: #ffffff;
+        }
+        .alert-success {
+            background-color: #1a5e2a;
+            border-color: #32b545;
+            color: #e2f5e7;
+        }
+        .form-text {
+            color: #c5c5c5;
+        }
+        .text-primary {
+            color: #66b3ff !important;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body class="bg-dark">
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-md-8">
@@ -52,14 +108,14 @@ UPLOAD_FORM = """
                     <div class="card-body">
                         <!-- Upload Form -->
                         <div class="mb-4">
-                            <h3 class="mb-3"><i class="bi bi-upload"></i> Upload a File</h3>
+                            <h3 class="mb-3 text-white"><i class="bi bi-upload"></i> Upload a File</h3>
                             <form method="post" enctype="multipart/form-data" class="border rounded p-3 bg-light">
                                 <div class="mb-3">
-                                    <label for="file" class="form-label">Select File</label>
+                                    <label for="file" class="form-label text-white">Select File</label>
                                     <input type="file" name="file" id="file" class="form-control" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="filename" class="form-label">Custom File Name (optional)</label>
+                                    <label for="filename" class="form-label text-white">Custom File Name (optional)</label>
                                     <input type="text" name="filename" id="filename" class="form-control" placeholder="Leave empty to use original name">
                                     <div class="form-text">You can specify a custom name for the uploaded file. Include the file extension if needed.</div>
                                 </div>
@@ -76,7 +132,7 @@ UPLOAD_FORM = """
                                 {% for message in messages %}
                                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                                         <i class="bi bi-check-circle"></i> {{ message }}
-                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
                                     </div>
                                 {% endfor %}
                             </div>
@@ -86,7 +142,7 @@ UPLOAD_FORM = """
                         <!-- Available Files -->
                         {% if show_files_flag %}
                         <div class="mb-4">
-                            <h3 class="mb-3"><i class="bi bi-files"></i> Available Files</h3>
+                            <h3 class="mb-3 text-white"><i class="bi bi-files"></i> Available Files</h3>
                             {% if files %}
                                 <div class="list-group">
                                     {% for filename in files %}
@@ -108,7 +164,7 @@ UPLOAD_FORM = """
 
                         <!-- Processing Queue -->
                         <div>
-                            <h3 class="mb-3"><i class="bi bi-gear"></i> Processing Queue</h3>
+                            <h3 class="mb-3 text-white"><i class="bi bi-gear"></i> Processing Queue</h3>
                             {% if processing_files or queue_files %}
                                 <!-- Currently Processing -->
                                 {% if processing_files %}
@@ -246,7 +302,7 @@ def download_file(filename):
 
 def background_worker():
     print("Background worker started...")
-    
+
     while True:
         with job_queue_lock:
             if job_queue:
@@ -268,7 +324,7 @@ def background_worker():
                 ".mp4"
             )  # Change extension to .mp4
 
-            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p -s 1280x720 -preset fast -crf 23 -an "{out_fname}"'
+            job_exec = f'{FFMPEG_BIN} -y -noautorotate -i "{job}" -c:v libx264 -pix_fmt yuv420p -s 1280x720 -preset fast -crf 23 -an -r 10 "{out_fname}"'
             print("Prepared job command:", job_exec)
 
             pass
