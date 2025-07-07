@@ -332,6 +332,7 @@ def background_worker():
                 "-c:v", "libx264",  # Video codec
                 "-pix_fmt", "yuv420p",  # Pixel format
                 "-vf", "\"scale='if(gt(iw,ih),-1,480)':'if(gt(iw,ih),480,-1)'\"",
+                "-vf", "crop=trunc(iw/2)*2:trunc(ih/2)*2",
                 "-preset", "fast",  # Encoding preset
                 "-crf", "23",  # Constant Rate Factor for quality
                 "-an",  # Disable audio
