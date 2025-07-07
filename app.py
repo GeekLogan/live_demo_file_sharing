@@ -23,7 +23,7 @@ job_queue_lock = threading.Lock()
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "uploads"
-app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 1000 MB limit
+app.config["MAX_CONTENT_LENGTH"] = 500 * 1024 * 1024  # 500 MB limit
 app.secret_key = "supersecretkey"  # Needed for flash messages
 
 # Ensure upload folder exists
