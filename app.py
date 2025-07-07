@@ -331,7 +331,7 @@ def background_worker():
                 "-i", f'"{str(job)}"',  # Input file
                 "-c:v", "libx264",  # Video codec
                 "-pix_fmt", "yuv420p",  # Pixel format
-                "-vf", "\"scale='if(gt(iw,ih),-1,720)':'if(gt(iw,ih),480,-1)'\"",
+                "-vf", "\"scale='if(gt(iw,ih),-1,480)':'if(gt(iw,ih),480,-1)'\"",
                 "-preset", "fast",  # Encoding preset
                 "-crf", "23",  # Constant Rate Factor for quality
                 "-an",  # Disable audio
